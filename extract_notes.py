@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 import pandas, string, os
 
 NOTES_CSV = 'MimicIII/Source/NOTEEVENTS.csv'
@@ -10,7 +10,7 @@ def notes_to_flat_files():
 
   notes_csv = os.path.join(base_path, NOTES_CSV)
   out_dir = os.path.join(base_path, OUT_DIR)
-  
+
   data_frame = pandas.read_csv(notes_csv, dtype='str')
 
   for id, text in zip(data_frame.ROW_ID, data_frame.TEXT):
