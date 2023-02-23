@@ -1,17 +1,25 @@
 #!/usr/bin/env python3
 
+# This is a Python reimplementation of
+# ctakes-misc/src/main/java/org/apache/ctakes/consumers/ExtractCuiSequences.java
+
 import os
+import pathlib
+
 from cassis import *
 
-# xmi_path = '/Users/Dima/Work/Data/MimicIII/Notes/XmiSample/1000.txt.xmi'
 xmi_dir = '/Users/Dima/Work/Data/MimicIII/Notes/Xmi/'
-identified_annot_class = 'org.apache.ctakes.typesystem.type.textsem.IdentifiedAnnotation'
-umls_concept_class = 'org_apache_ctakes_typesystem_type_refsem_UmlsConcept'
+cui_dir = '/Users/Dima/Work/Data/MimicIII/Notes/Cui/'
+
+ident_annot_class_name = 'org.apache.ctakes.typesystem.type.textsem.IdentifiedAnnotation'
+umls_concept_class_name = 'org_apache_ctakes_typesystem_type_refsem_UmlsConcept'
 type_system_path = 'TypeSystem.xml'
 
 def get_ontology_concept_codes(identified_annot):
   """Extract CUIs from an identified annotation"""
 
+  # often the same CUI added multiple times
+  # must count it only once
   codes = set()
 
   ontology_concept_arr = identified_annot['ontologyConceptArr']
@@ -20,7 +28,7 @@ def get_ontology_concept_codes(identified_annot):
     return codes
 
   for ontology_concept in ontology_concept_arr.elements:
-    if type(ontology_concept).__name__ == umls_concept_class:
+    if type(ontology_concept).__name__ == umls_concept_class_name:
       code = ontology_concept['cui']
       codes.add(code)
     else:
@@ -39,11 +47,15 @@ def process_xmi_file(xmi_path):
   sys_view = cas.get_view('_InitialView')
 
   cuis = []
-  for ident_annot in sys_view.select(identified_annot_class):
-    text = ident_annot.get_covered_text().replace('\n', '')
+  for ident_annot in sys_view.select(ident_annot_class_name):
+    # text = ident_annot.get_covered_text().replace('\n', '')
     for code in get_ontology_concept_codes(ident_annot):
-      print(text, '/', code)
       cuis.append(code)
+
+  cuis_as_str = ' '.join(cuis)
+  out_file_name = pathlib.Path(xmi_path).stem
+  out_file = pathlib.Path(os.path.join(cui_dir, out_file_name))
+  out_file.write_text(cuis_as_str)
 
 if __name__ == "__main__":
 
