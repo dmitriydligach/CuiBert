@@ -18,8 +18,8 @@ type_system_path = 'TypeSystem.xml'
 def get_ontology_concept_codes(identified_annot):
   """Extract CUIs from an identified annotation"""
 
-  # often the same CUI added multiple times
-  # must count it only once
+  # same CUI often added multiple times
+  # but must include it only once
   codes = set()
 
   ontology_concept_arr = identified_annot['ontologyConceptArr']
@@ -32,15 +32,12 @@ def get_ontology_concept_codes(identified_annot):
       code = ontology_concept['cui']
       codes.add(code)
     else:
-      print('WEIRDNESS')
+      print('Does this ever happen?')
 
   return codes
 
-def process_xmi_file(xmi_path):
+def process_xmi_file(xmi_path, type_system):
   """This is a Python staple"""
-
-  type_system_file = open(type_system_path, 'rb')
-  type_system = load_typesystem(type_system_file)
 
   xmi_file = open(xmi_path, 'rb')
   cas = load_cas_from_xmi(xmi_file, typesystem=type_system)
@@ -57,8 +54,17 @@ def process_xmi_file(xmi_path):
   out_file = pathlib.Path(os.path.join(cui_dir, out_file_name))
   out_file.write_text(cuis_as_str)
 
-if __name__ == "__main__":
+def main():
+  """Main driver"""
+
+  # load type system once for all files
+  type_system_file = open(type_system_path, 'rb')
+  type_system = load_typesystem(type_system_file)
 
   for file_name in os.listdir(xmi_dir):
     xmi_path = os.path.join(xmi_dir, file_name)
-    process_xmi_file(xmi_path)
+    process_xmi_file(xmi_path, type_system)
+
+if __name__ == "__main__":
+
+  main()
