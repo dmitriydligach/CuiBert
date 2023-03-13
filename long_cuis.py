@@ -59,8 +59,10 @@ def save_longest_spans(concepts, out_file):
 
   # compare a concept to all other concepts
   # discard if it lies inside another concept
-  discard_flag = False
+
   for a in concepts:
+    discard_flag = False
+    
     for b in concepts:
       if a.is_contained(b):
         discard_flag = True
