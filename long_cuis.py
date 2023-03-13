@@ -36,27 +36,29 @@ class UmlsConcept:
   def is_contained(self, another):
     """Return true if self should be eliminated"""
 
-    # comparison to itself
+    # handle comparison to itself
     if self == another:
       return False
 
-    # same span different CUIs
+    # handle same span different CUIs
     if self.start == another.start and \
        self.end == another.end and \
        self.cui != another.cui:
       return False
 
+    # self's span is inside another's span
     if self.start >= another.start and \
        self.end <= another.end:
       return True
 
+    # most cases
     return False
 
 def save_longest_spans(concepts, out_file):
-  """Preserve only longest concept mentions"""
+  """Preserve concepts that are not contained inside others"""
 
-  # compare concept a to all other concepts
-  # discared if it lies inside another concept
+  # compare a concept to all other concepts
+  # discard if it lies inside another concept
   discard_flag = False
   for a in concepts:
     for b in concepts:
