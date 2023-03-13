@@ -46,8 +46,9 @@ def process_xmi_file(xmi_path, type_system, out_file):
   xmi_file = open(xmi_path, 'rb')
   cas = load_cas_from_xmi(xmi_file, typesystem=type_system)
   sys_view = cas.get_view('_InitialView')
-  source_file = pathlib.Path(xmi_path).stem
+  source_file_name = pathlib.Path(xmi_path).stem
 
+  out_tuples = []
   for ident_annot in sys_view.select(ident_annot_class_name):
     text = ident_annot.get_covered_text()
     start_offset = ident_annot['begin']
@@ -56,15 +57,19 @@ def process_xmi_file(xmi_path, type_system, out_file):
     cui_info = get_cui_coding_sceme_preferred_text(ident_annot)
     for cui, (coding_scheme, pref_text) in cui_info.items():
       out_tuple = (
-        source_file,
+        source_file_name,
         cui,
         text,
         coding_scheme.lower(),
         str(pref_text), # sometimes None
         str(start_offset),
         str(end_offset))
-      out_str = '|'.join(out_tuple) + '\n'
-      out_file.write(out_str)
+      out_tuples.append(out_tuple)
+
+  # output tuples sorted by start offset
+  out_tuples.sort(key = lambda x: int(x[5]))
+  for out_tuple in out_tuples:
+    out_file.write('|'.join(out_tuple) + '\n')
 
 def main():
   """Main driver"""
