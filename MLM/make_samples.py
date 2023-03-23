@@ -1,52 +1,65 @@
 #! /usr/bin/env python3
-import pandas, string, os, pathlib, numpy
+import os, numpy
 
-# Create samples for pretraining transformers from MIMIC notes
+# Create samples for pretraining transformers using MIMIC notes
 # For now each note is one sample, but will break down further later
 
 base = os.environ['DATA_ROOT']
 
-mimic_notes_file = os.path.join(base, 'MimicIII/Source/NOTEEVENTS.csv')
-mimic_cui_dir = os.path.join(base, 'MimicIII/Encounters/Cuis/All/')
-out_file = 'notes.txt'
+cui_file_path = '../Cuis/filtered.csv'
+out_file_path = './training_data.txt'
 
-def extract_cuis(use_unique_cuis=True):
-  """Each line is the content of one cui file"""
+min_cui_count = 5
+max_cui_count = 25
 
+class UmlsConcept:
+  """UMLS concept"""
+
+  def __init__(self, s):
+    """E.g. 109143.txt|C0030471|Sinus|snomedct_us|Nasal sinus|0|5"""
+
+    elements = s.split('|')
+
+    if len(elements) != 7:
+      raise ValueError('not enough elements:', s)
+    else:
+      self.file = elements[0]
+      self.cui = elements[1]
+      self.text  = elements[2]
+      self.vocabulary = elements[3]
+      self.preferred = elements[4]
+      self.start = int(elements[5])
+      self.end = int(elements[6])
+
+def main():
+  """Main street"""
+
+  out_file = open(out_file_path, 'w')
+
+  cuis = []
   cui_counts = []
-  outfile = open(out_file, 'w')
+  cur_file = None
 
-  for cui_file in pathlib.Path(mimic_cui_dir).glob('*.txt'):
-    cuis_from_file = pathlib.Path(cui_file).read_text()
+  for line in open(cui_file_path):
+    concept = UmlsConcept(line.strip())
 
-    # remove first C from each CUI to avoid tokenization problems
-    cui_list = [cui[1:] for cui in cuis_from_file.split()]
+    # are we processing a new file?
+    if cur_file != concept.file:
+      cui_counts.append(len(cuis))
 
-    if use_unique_cuis:
-      cui_list = list(set(cui_list))
+      if min_cui_count <= len(cuis) <= max_cui_count:
+        out_file.write(' '.join(cuis) + '\n')
 
-    cui_counts.append(len(cui_list))
-    cui_string = ' '.join(cui_list)
+      cur_file = concept.file
+      cuis = []
 
-    outfile.write(cui_string + '\n')
+    cuis.append(concept.cui[1:])
 
-  print(f'unique cui flag is {use_unique_cuis}')
   print(f'average number of cuis: {numpy.mean(cui_counts):.2f}')
   print(f'median number of cuis: {numpy.median(cui_counts):.2f}')
   print(f'standard deviation: {numpy.std(cui_counts):.2f}')
   print(f'max number of cuis: {numpy.max(cui_counts)}')
 
-def extract_notes():
-  """Extract only mimic notes to a csv file"""
-
-  outfile = open(out_file, 'w')
-  frame = pandas.read_csv(mimic_notes_file, dtype='str', nrows=None)
-
-  for text in frame.TEXT:
-    printable = ''.join(c for c in text if c in string.printable)
-    printable = printable.replace('\n', '')
-    outfile.write(printable + '\n')
-
 if __name__ == "__main__":
 
-  extract_cuis()
+  main()
