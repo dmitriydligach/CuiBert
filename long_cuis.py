@@ -11,13 +11,16 @@ class UmlsConcept:
 
     elements = s.split('|')
 
-    self.file = elements[0]
-    self.cui = elements[1]
-    self.text  = elements[2]
-    self.vocabulary = elements[3]
-    self.preferred = elements[4]
-    self.start = int(elements[5])
-    self.end = int(elements[6])
+    if len(elements) != 7:
+      raise ValueError('not enough elements:', s)
+    else:
+      self.file = elements[0]
+      self.cui = elements[1]
+      self.text  = elements[2]
+      self.vocabulary = elements[3]
+      self.preferred = elements[4]
+      self.start = int(elements[5])
+      self.end = int(elements[6])
 
   def __str__(self):
     """Convert back to string"""
@@ -80,7 +83,11 @@ def main():
   out_file = open(output_file, 'w')
 
   for line in open(input_file):
-    concept = UmlsConcept(line.strip())
+    try:
+      concept = UmlsConcept(line.strip())
+    except ValueError:
+      continue # skip this line for now
+
     if cur_file != concept.file:
       cur_file = concept.file
       save_longest_spans(concepts, out_file)
