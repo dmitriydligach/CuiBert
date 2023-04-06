@@ -1,8 +1,8 @@
 #! /usr/bin/env python3
 import pandas, string, os
 
-drbench_path = 'DrBench/Csv/summ_0821_train.csv'
-out_dir = 'DrBench/Text/Train/'
+drbench_path = 'DrBench/Csv/summ_0821_test.csv'
+out_dir = 'DrBench/Text/Test/'
 
 def csv_to_flat_files():
   """Convert a csv dr bench file to flat files"""
