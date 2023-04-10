@@ -1,11 +1,20 @@
 #!/usr/bin/env python3
 
-import configparser, os, pandas, sys, pathlib, shutil, pickle
-import tokenizer
+import os, shutil, pickle
 from collections import defaultdict
+from dataclasses import dataclass
+import tokenizer
 
 model_dir = 'Model/'
 alphabet_pickle = 'Model/alphabet.p'
+
+@dataclass
+class ModelConfig:
+  """Everything we need to train"""
+
+  train_data_path: str
+  test_data_path: str
+  cui_vocab_size: str
 
 class DatasetProvider:
   """Summarization and assessment data"""
@@ -67,6 +76,8 @@ class DatasetProvider:
       if len(self.inputs[file]) > 0 and len(self.outputs[file]) > 0:
         x.append(self.inputs[file])
         y.append(self.outputs[file])
+      else:
+        print('empty assessment or treament:', file)
 
     # make x and y matrices
     x = self.tokenizer.texts_to_seqs(x, add_cls_token=False)
@@ -79,13 +90,13 @@ class DatasetProvider:
 if __name__ == "__main__":
   """Test dataset class"""
 
-  cfg = configparser.ConfigParser()
-  cfg.read(sys.argv[1])
   base = os.environ['DATA_ROOT']
+  config = ModelConfig(
+    train_data_path=os.path.join(base, 'DrBench/Cui/train.csv'),
+    test_data_path=os.path.join(base, 'DrBench/Cui/dev.csv'),
+    cui_vocab_size='all')
 
-  dp = DatasetProvider(
-    os.path.join(base, cfg.get('data', 'train')),
-    cfg.get('args', 'cui_vocab_size'))
+  dp = DatasetProvider(config.train_data_path, config.cui_vocab_size)
 
   inputs, outputs = dp.load_as_sequences()
   print(inputs[2])
