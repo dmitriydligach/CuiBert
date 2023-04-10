@@ -11,6 +11,8 @@ from torch.utils.data import RandomSampler, SequentialSampler
 
 from sklearn.model_selection import train_test_split
 
+from dataclasses import dataclass
+
 import os, configparser, random, pickle
 import data, utils
 
@@ -23,6 +25,21 @@ random.seed(2020)
 # model and model config locations
 model_path = 'Model/model.pt'
 config_path = 'Model/config.p'
+
+@dataclass
+class ModelConfig:
+  """Everything we need to train"""
+
+  train_data_path: str
+  test_data_path: str
+  cui_vocab_size: str
+
+  epochs: int
+  batch: int
+  hidden: int
+  dropout: float
+  optimizer: str
+  lr: float
 
 class BagOfWords(nn.Module):
 
@@ -114,7 +131,7 @@ def fit(model, train_loader, val_loader, n_epochs):
 
   optimizer = torch.optim.Adam(
     model.parameters(),
-    lr=cfg.getfloat('model', 'lr'))
+    lr=config.lr)
 
   best_loss = float('inf')
   optimal_epochs = 0
@@ -183,11 +200,8 @@ def evaluate(model, data_loader):
 def main():
   """My main main"""
 
-  dp = data.DatasetProvider(
-    os.path.join(base, cfg.get('data', 'cuis')),
-    os.path.join(base, cfg.get('data', 'codes')),
-    cfg.get('args', 'cui_vocab_size'),
-    cfg.get('args', 'code_vocab_size'))
+  dp = data.DatasetProvider(config.train_data_path, config.cui_vocab_size)
+
   in_seqs, out_seqs = dp.load_as_sequences()
 
   tr_in_seqs, val_in_seqs, tr_out_seqs, val_out_seqs = train_test_split(
@@ -204,33 +218,41 @@ def main():
 
   train_loader = make_data_loader(
     utils.sequences_to_matrix(tr_in_seqs, len(dp.tokenizer.stoi)),
-    utils.sequences_to_matrix(tr_out_seqs, len(dp.output_tokenizer.stoi)),
-    cfg.getint('model', 'batch'),
+    utils.sequences_to_matrix(tr_out_seqs, len(dp.tokenizer.stoi)),
+    config.batch,
     'train')
 
   val_loader = make_data_loader(
     utils.sequences_to_matrix(val_in_seqs, len(dp.tokenizer.stoi)),
-    utils.sequences_to_matrix(val_out_seqs, len(dp.output_tokenizer.stoi)),
-    cfg.getint('model', 'batch'),
+    utils.sequences_to_matrix(val_out_seqs, len(dp.tokenizer.stoi)),
+    config.batch,
     'dev')
 
   model = BagOfWords(
     input_vocab_size=len(dp.tokenizer.stoi),
-    output_vocab_size=len(dp.output_tokenizer.stoi),
-    hidden_units=cfg.getint('model', 'hidden'),
-    dropout_rate=cfg.getfloat('model', 'dropout'))
+    output_vocab_size=len(dp.tokenizer.stoi),
+    hidden_units=config.hidden,
+    dropout_rate=config.dropout)
 
   best_loss, optimal_epochs = fit(
     model,
     train_loader,
     val_loader,
-    cfg.getint('model', 'epochs'))
+    config.epochs)
   print('best loss %.4f after %d epochs' % (best_loss, optimal_epochs))
 
 if __name__ == "__main__":
 
-  cfg = configparser.ConfigParser()
-  cfg.read(sys.argv[1])
   base = os.environ['DATA_ROOT']
+  config = ModelConfig(
+    train_data_path=os.path.join(base, 'DrBench/Cui/train.csv'),
+    test_data_path=os.path.join(base, 'DrBench/Cui/dev.csv'),
+    cui_vocab_size='all',
+    epochs=10,
+    batch=32,
+    hidden=512,
+    dropout=0.1,
+    optimizer='Adam',
+    lr=1e-3)
 
   main()
