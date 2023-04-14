@@ -142,7 +142,6 @@ def fit(model, train_loader, val_loader, n_epochs):
     train_loss, num_train_steps = 0, 0
 
     for batch in train_loader:
-
       optimizer.zero_grad()
 
       batch = tuple(t.to(device) for t in batch)
@@ -159,9 +158,9 @@ def fit(model, train_loader, val_loader, n_epochs):
       num_train_steps += 1
 
     av_tr_loss = train_loss / num_train_steps
-    val_loss = evaluate(model, val_loader)
-    print('ep: %d, steps: %d, tr loss: %.4f, val loss: %.4f' % \
-          (epoch, num_train_steps, av_tr_loss, val_loss))
+    val_loss, val_accuracy = evaluate(model, val_loader)
+    print('ep: %d, steps: %d, tr loss: %.4f, val loss: %.4f, val acc: %.4f' % \
+          (epoch, num_train_steps, av_tr_loss, val_loss, val_accuracy))
 
     if val_loss < best_loss:
       print('loss improved, saving model...')
@@ -170,6 +169,15 @@ def fit(model, train_loader, val_loader, n_epochs):
       optimal_epochs = epoch
 
   return best_loss, optimal_epochs
+
+def multi_label_accuracy(pred_labels, true_labels):
+  """Predictions and true labels are multi-hot tensors"""
+
+  correct_predictions = (true_labels * pred_labels).sum()
+  total_positive_labels = true_labels.sum()
+  accuracy = correct_predictions / total_positive_labels
+
+  return accuracy
 
 def evaluate(model, data_loader):
   """Evaluation routine"""
@@ -182,8 +190,10 @@ def evaluate(model, data_loader):
 
   model.eval()
 
-  for batch in data_loader:
+  all_pred_labels = None
+  all_true_labels = None
 
+  for batch in data_loader:
     batch = tuple(t.to(device) for t in batch)
     batch_inputs, batch_outputs = batch
 
@@ -191,11 +201,25 @@ def evaluate(model, data_loader):
       logits = model(batch_inputs)
       loss = criterion(logits, batch_outputs)
 
+    batch_logits = logits.detach().to('cpu')
+    batch_outputs = batch_outputs.to('cpu')
+    batch_probs = torch.sigmoid(batch_logits)
+    batch_preds = (batch_probs > 0.5).int()
+
+    if all_pred_labels == None:
+      all_pred_labels = batch_preds
+      all_true_labels = batch_outputs
+    else:
+      all_pred_labels = torch.cat([all_pred_labels, batch_preds], dim=0)
+      all_true_labels = torch.cat([all_true_labels, batch_outputs], dim=0)
+
     total_loss += loss.item()
     num_steps += 1
 
   av_loss = total_loss / num_steps
-  return av_loss
+  accuracy = multi_label_accuracy(all_pred_labels, all_true_labels)
+
+  return av_loss, accuracy
  
 def main():
   """My main main"""
@@ -248,7 +272,7 @@ if __name__ == "__main__":
     train_data_path=os.path.join(base, 'DrBench/Cui/train.csv'),
     test_data_path=os.path.join(base, 'DrBench/Cui/dev.csv'),
     cui_vocab_size='all',
-    epochs=10,
+    epochs=100,
     batch=32,
     hidden=512,
     dropout=0.1,
