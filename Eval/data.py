@@ -5,8 +5,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 import tokenizer
 
-model_dir = 'Model/'
-alphabet_pickle = 'Model/alphabet.p'
+default_tokenizer_pickle = 'Model/tokenizer.p'
 
 @dataclass
 class ModelConfig:
@@ -21,14 +20,11 @@ class DatasetProvider:
 
   def __init__(self,
                cui_file_path,
-               cui_vocab_size):
+               cui_vocab_size,
+               tokenize_from_scratch):
     """Construct it"""
 
     self.cui_file_path = cui_file_path
-
-    if os.path.isdir(model_dir):
-      shutil.rmtree(model_dir)
-    os.mkdir(model_dir)
 
     # key: file name, value: list of cuis
     self.inputs = defaultdict(list)
@@ -37,11 +33,14 @@ class DatasetProvider:
     # pair inputs and outputs
     self.read_data()
 
-    # index cuis
-    self.tokenizer = tokenizer.Tokenizer(
-      n_words=None if cui_vocab_size == 'all' else int(cui_vocab_size),
-      lower=False)
-    self.tokenize()
+    # do we need to index CUIs?
+    if tokenize_from_scratch:
+      self.tokenizer = tokenizer.Tokenizer(
+        n_words=None if cui_vocab_size == 'all' else cui_vocab_size)
+      self.tokenize()
+    else:
+      pkl = open(default_tokenizer_pickle, 'rb')
+      self.tokenizer = pickle.load(pkl)
 
   def read_data(self):
     """Read a CUI file"""
@@ -58,11 +57,16 @@ class DatasetProvider:
   def tokenize(self):
     """Read text and map tokens to ints"""
 
+    if os.path.isdir('Model/'):
+      shutil.rmtree('Model/')
+    os.mkdir('Model/')
+
+    # index CUIs using inputs and outputs
     self.tokenizer.fit_on_texts(
       list(self.inputs.values()) +
       list(self.outputs.values()))
 
-    pickle_file = open('Model/tokenizer.p', 'wb')
+    pickle_file = open(default_tokenizer_pickle, 'wb')
     pickle.dump(self.tokenizer, pickle_file)
     print('input vocab:', len(self.tokenizer.stoi))
 
@@ -96,7 +100,10 @@ if __name__ == "__main__":
     test_data_path=os.path.join(base, 'DrBench/Cui/dev.csv'),
     cui_vocab_size='all')
 
-  dp = DatasetProvider(config.train_data_path, config.cui_vocab_size)
+  dp = DatasetProvider(
+    cui_file_path=config.train_data_path,
+    cui_vocab_size=config.cui_vocab_size,
+    tokenize_from_scratch=True)
 
   inputs, outputs = dp.load_as_sequences()
   print(inputs[2])

@@ -8,7 +8,6 @@ class Tokenizer:
   def __init__(
    self,
    n_words,
-   lower=False,
    padding_token='[PAD]',
    unk_token='[UNK]',
    cls_token='[CLS]'):
@@ -20,7 +19,6 @@ class Tokenizer:
 
     # first three tokens are reserved
     self.n_words = None if n_words is None else n_words-3
-    self.lower = lower
     self.unk = unk_token
     self.cls = cls_token
 
