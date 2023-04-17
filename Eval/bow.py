@@ -9,8 +9,6 @@ import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
 from torch.utils.data import RandomSampler, SequentialSampler
 
-from sklearn.model_selection import train_test_split
-
 from dataclasses import dataclass
 
 import os, random, pickle
@@ -171,6 +169,10 @@ def fit(model, train_loader, val_loader, n_epochs):
 def multi_label_accuracy(pred_labels, true_labels):
   """Predictions and true labels are multi-hot tensors"""
 
+  # true_labels = [[1, 0, 1, 0], [0, 1, 0, 1], [1, 1, 1, 0]]
+  # pred_labes = [[1, 0, 0, 1], [0, 1, 1, 0], [1, 0, 1, 1]]
+  # recall accuracy = 4 / 7 = 0.57
+
   correct_predictions = (true_labels * pred_labels).sum()
   total_positive_labels = true_labels.sum()
   accuracy = correct_predictions / total_positive_labels
@@ -277,7 +279,7 @@ if __name__ == "__main__":
     cui_vocab_size='all',
     epochs=20,
     batch=64,
-    hidden=1024,
+    hidden=10000,
     dropout=0.5,
     optimizer='Adam',
     lr=1e-2)
