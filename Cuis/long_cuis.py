@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-input_file = 'cuis.csv'
-output_file = 'filtered.csv'
+input_file = '/Users/Dima/Work/Data/DrBench/Cui/Original/test.csv'
+output_file = '/Users/Dima/Work/Data/DrBench/Cui/LongestSpan/test.csv'
 
 class UmlsConcept:
   """UMLS concept"""

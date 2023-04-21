@@ -273,9 +273,9 @@ if __name__ == "__main__":
 
   base = os.environ['DATA_ROOT']
   config = ModelConfig(
-    train_data_path=os.path.join(base, 'DrBench/Cui/train.csv'),
-    dev_data_path=os.path.join(base, 'DrBench/Cui/dev.csv'),
-    test_data_path=os.path.join(base, 'DrBench/Cui/dev.csv'),
+    train_data_path=os.path.join(base, 'DrBench/Cui/LongestSpan/train.csv'),
+    dev_data_path=os.path.join(base, 'DrBench/Cui/LongestSpan/dev.csv'),
+    test_data_path=os.path.join(base, 'DrBench/Cui/LongestSpan/test.csv'),
     cui_vocab_size='all',
     epochs=20,
     batch=64,
