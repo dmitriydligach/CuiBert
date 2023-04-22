@@ -11,7 +11,7 @@ from torch.utils.data import RandomSampler, SequentialSampler
 
 from dataclasses import dataclass
 
-import os, random, pickle
+import os, random
 import data, utils
 
 # deterministic determinism
@@ -47,9 +47,8 @@ class BagOfWords(nn.Module):
     input_vocab_size,
     output_vocab_size,
     hidden_units,
-    dropout_rate,
-    save_config=True):
-    """Constructor"""
+    dropout_rate):
+    """Construct us"""
 
     super(BagOfWords, self).__init__()
 
@@ -66,16 +65,6 @@ class BagOfWords(nn.Module):
       out_features=output_vocab_size)
 
     self.init_weights()
-
-    # save configuration for loading later
-    if save_config:
-      config = {
-        'input_vocab_size': input_vocab_size,
-        'output_vocab_size': output_vocab_size,
-        'hidden_units': hidden_units,
-        'dropout_rate': dropout_rate}
-      pickle_file = open(config_path, 'wb')
-      pickle.dump(config, pickle_file)
 
   def init_weights(self):
     """Never trust pytorch default weight initialization"""
@@ -277,11 +266,11 @@ if __name__ == "__main__":
     dev_data_path=os.path.join(base, 'DrBench/Cui/LongestSpan/dev.csv'),
     test_data_path=os.path.join(base, 'DrBench/Cui/LongestSpan/test.csv'),
     cui_vocab_size='all',
-    epochs=20,
-    batch=64,
+    epochs=100,
+    batch=128,
     hidden=10000,
-    dropout=0.5,
+    dropout=0.25,
     optimizer='Adam',
-    lr=1e-2)
+    lr=1)
 
   model_selection()
