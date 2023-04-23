@@ -195,7 +195,7 @@ def evaluate(model, data_loader):
     batch_probs = torch.sigmoid(batch_logits)
     batch_preds = (batch_probs > 0.5).int()
 
-    if all_pred_labels == None:
+    if all_pred_labels is None:
       all_pred_labels = batch_preds
       all_true_labels = batch_outputs
     else:
@@ -266,7 +266,7 @@ if __name__ == "__main__":
     dev_data_path=os.path.join(base, 'DrBench/Cui/LongestSpan/dev.csv'),
     test_data_path=os.path.join(base, 'DrBench/Cui/LongestSpan/test.csv'),
     cui_vocab_size='all',
-    epochs=100,
+    epochs=50,
     batch=128,
     hidden=10000,
     dropout=0.25,
