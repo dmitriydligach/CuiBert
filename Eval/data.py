@@ -37,6 +37,7 @@ class SummarizationDataset(Dataset):
 
     input = self.tokenizer(
       self.x[index],
+      is_split_into_words=True,
       max_length=max_length,
       padding='max_length',
       truncation=True,
@@ -44,6 +45,7 @@ class SummarizationDataset(Dataset):
 
     output = self.tokenizer(
       self.y[index],
+      is_split_into_words=True,
       max_length=max_length,
       padding='max_length',
       truncation=True,
