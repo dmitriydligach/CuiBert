@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 
 import torch, random, data, os, shutil
-from torch import nn
-from torch.nn import functional as F
 from transformers import (TrainingArguments,
                           Trainer,
-                          AutoModel,
-                          IntervalStrategy, BertPreTrainedModel, BertModel)
+                          AutoModelForSequenceClassification,
+                          IntervalStrategy)
 
 # misc constants
 pretrained_model_path = 'checkpoint-30000'
@@ -16,36 +14,12 @@ tokenizer_path = './checkpoint-30000'
 results_file = './results.txt'
 
 # hyperparameters
-model_selection_n_epochs = 25
-batch_size = 48
+model_selection_n_epochs = 100
+batch_size = 128
 
 # search over these hyperparameters
 classifier_dropouts = [0.1, 0.25, 0.5]
 learning_rates = [2e-5, 3e-5, 5e-5, 7e-5]
-
-class BertClassifier(BertPreTrainedModel):
-  """Linear layer on top of pre-trained BERT"""
-
-  def __init__(self, config):
-    """Constructor"""
-
-    super(BertClassifier, self).__init__(config)
-
-    self.bert = BertModel(config)
-    self.dropout = nn.Dropout(0.1)
-    self.linear = nn.Linear(config.hidden_size, config.vocab_size)
-
-  def forward(self, input_ids, attention_mask):
-    """Forward pass"""
-
-    # (batch_size, seq_len, hidden_size=768)
-    output = self.bert(input_ids, attention_mask)[0]
-    # (batch_size, hidden_size=768)
-    output = output[:, 0, :]
-    output = self.dropout(output)
-    logits = self.linear(output)
-
-    return logits
 
 def init_transformer(m: torch.nn.Module):
   """Jiacheng Zhang's transformer initialization wisdom"""
@@ -61,15 +35,29 @@ def init_transformer(m: torch.nn.Module):
       else:
         torch.nn.init.uniform_(params)
 
-# def compute_metrics(eval_pred):
-#   """Compute custom evaluation metric"""
-#
-#   logits, labels = eval_pred
-#   logits = torch.from_numpy(logits) # torch tensor for softmax
-#   probabilities = F.softmax(logits, dim=1).numpy()[:, 1] # back to numpy
-#
-#   # https://stackoverflow.com/questions/69087044/early-stopping-in-bert-trainer-instances
-#   return {'pr_auc': metrics.pr_auc_score(y_test=labels, probs=probabilities)}
+def multi_label_accuracy(pred_labels, true_labels):
+  """Predictions and true labels are multi-hot tensors"""
+
+  # true_labels = [[1, 0, 1, 0], [0, 1, 0, 1], [1, 1, 1, 0]]
+  # pred_labes = [[1, 0, 0, 1], [0, 1, 1, 0], [1, 0, 1, 1]]
+  # recall accuracy = 4 / 7 = 0.57
+
+  correct_predictions = (true_labels * pred_labels).sum()
+  total_positive_labels = true_labels.sum()
+  accuracy = correct_predictions / total_positive_labels
+
+  return accuracy
+
+def compute_metrics(eval_pred):
+  """Compute custom evaluation metric"""
+
+  logits, labels = eval_pred
+  probs = torch.sigmoid(logits)
+  preds = (probs > 0.5).int()
+
+  # https://stackoverflow.com/questions/69087044/early-stopping-in-bert-trainer-instances
+  # return {'multilab_acc': metrics.pr_auc_score(y_test=labels, probs=probabilities)}
+  return {'multilab_acc': multi_label_accuracy(preds, labels)}
 
 def grid_search(train_path, dev_path):
   """Try different hyperparameter combinations and return the best"""
@@ -105,9 +93,11 @@ def eval_on_dev_set(train_path, dev_path, learning_rate, classifier_dropout):
   torch.manual_seed(2022)
   random.seed(2022)
 
-  model = BertClassifier.from_pretrained(pretrained_model_path)
-  # model = AutoModel.from_pretrained(pretrained_model_path)
-  # model.dropout = torch.nn.modules.dropout.Dropout(classifier_dropout)
+  model = AutoModelForSequenceClassification.from_pretrained(
+    pretrained_model_path,
+    num_labels=30522,
+    problem_type='multi_label_classification')
+  model.dropout = torch.nn.modules.dropout.Dropout(classifier_dropout)
 
   train_dataset = data.SummarizationDataset(train_path, tokenizer_path)
   dev_dataset = data.SummarizationDataset(dev_path, tokenizer_path)

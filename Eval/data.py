@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
-import os, pathlib, numpy
+import os, utils
 from collections import defaultdict
 
+import torch
 from torch.utils.data import Dataset
 from transformers import AutoTokenizer
 
@@ -35,6 +36,7 @@ class SummarizationDataset(Dataset):
   def __getitem__(self, index):
     """Required by pytorch"""
 
+    # sequence of CUI indices + special tokens
     input = self.tokenizer(
       self.x[index],
       is_split_into_words=True,
@@ -43,18 +45,20 @@ class SummarizationDataset(Dataset):
       truncation=True,
       return_tensors='pt')
 
+    # sequence of CUI indices
     output = self.tokenizer(
       self.y[index],
       is_split_into_words=True,
-      max_length=max_length,
-      padding='max_length',
-      truncation=True,
-      return_tensors='pt')
+      add_special_tokens=False)
+
+    # mult-hot vectors
+    labels = torch.zeros(30522)
+    labels[output.input_ids] = 1.0
 
     return dict(
       input_ids = input.input_ids.squeeze(),
       attention_mask=input.attention_mask.squeeze(),
-      labels = output.input_ids.squeeze())
+      labels = labels)
 
   def read_data(self):
     """Read a CUI file and pair assessments and plans"""
