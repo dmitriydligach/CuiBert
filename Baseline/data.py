@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+import sys
+sys.path.append('../Lib/')
+
 import os, shutil, pickle
 from collections import defaultdict
 from dataclasses import dataclass
