@@ -9,17 +9,17 @@ from transformers import (TrainingArguments,
 # misc constants
 pretrained_model_path = 'checkpoint-30000'
 output_dir = './Results'
-metric_for_best_model = 'eval_pr_auc'
+metric_for_best_model = 'eval_multilab_acc'
 tokenizer_path = './checkpoint-30000'
 results_file = './results.txt'
 
 # hyperparameters
-model_selection_n_epochs = 100
-batch_size = 128
+model_selection_n_epochs = 5
+batch_size = 512
 
 # search over these hyperparameters
-classifier_dropouts = [0.1, 0.25, 0.5]
-learning_rates = [2e-5, 3e-5, 5e-5, 7e-5]
+classifier_dropouts = [0.1]
+learning_rates = [1e-2, 1e-3, 1e-4, 1e-5]
 
 def init_transformer(m: torch.nn.Module):
   """Jiacheng Zhang's transformer initialization wisdom"""
@@ -52,6 +52,10 @@ def compute_metrics(eval_pred):
   """Compute custom evaluation metric"""
 
   logits, labels = eval_pred
+
+  logits = torch.from_numpy(logits)
+  labels = torch.from_numpy(labels)
+
   probs = torch.sigmoid(logits)
   preds = (probs > 0.5).int()
 
@@ -118,8 +122,8 @@ def eval_on_dev_set(train_path, dev_path, learning_rate, classifier_dropout):
     model=model,
     args=training_args,
     train_dataset=train_dataset,
-    eval_dataset=dev_dataset)
-    # compute_metrics=compute_metrics)
+    eval_dataset=dev_dataset,
+    compute_metrics=compute_metrics)
   trainer.train()
 
   best_n_epochs = None
