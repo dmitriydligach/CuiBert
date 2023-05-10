@@ -8,7 +8,8 @@ train_data_path = os.path.join(base, 'DrBench/Cui/LongestSpan/train.csv')
 dev_data_path = os.path.join(base, 'DrBench/Cui/LongestSpan/dev.csv')
 
 # Example:
-# ['C1956346', 'C0018946', 'C0038615'] ['C0038615', 'C0032285']
+# predicted: ['C1956346', 'C0018946', 'C0038615']
+# gold:      ['C0038615', 'C0032285']
 # Intersection:          1 CUI
 # Precision denominator: 3 (input size)
 # Recall denominator:    2 (output size)
