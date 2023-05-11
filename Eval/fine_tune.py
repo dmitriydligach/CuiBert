@@ -36,6 +36,9 @@ def multi_label_accuracy(pred_labels, true_labels):
   total_positive_labels = true_labels.sum()
   total_predicted_labels = pred_labels.sum()
 
+  if total_predicted_labels == 0 or total_positive_labels == 0:
+    return 0
+
   precision = correct_predictions / total_predicted_labels
   recall = correct_predictions / total_positive_labels
   f1 = 2 * (precision * recall) / (precision + recall)
