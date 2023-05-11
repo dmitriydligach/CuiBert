@@ -24,20 +24,6 @@ batch_size = 512
 classifier_dropouts = [0.1]
 learning_rates = [1e-2, 1e-3, 1e-4, 1e-5]
 
-def init_transformer(m: torch.nn.Module):
-  """Jiacheng Zhang's transformer initialization wisdom"""
-
-  for name, params in m.named_parameters():
-    print('initializing:', name)
-
-    if len(params.shape) >= 2:
-      torch.nn.init.xavier_uniform_(params)
-    else:
-      if 'bias' in name:
-        torch.nn.init.zeros_(params)
-      else:
-        torch.nn.init.uniform_(params)
-
 def multi_label_accuracy(pred_labels, true_labels):
   """Predictions and true labels are multi-hot tensors"""
 

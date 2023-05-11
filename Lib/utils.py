@@ -28,6 +28,20 @@ def sequences_to_matrix(seqs, n_columns):
 
   return multi_hot
 
+def init_transformer(m: torch.nn.Module):
+  """Jiacheng Zhang's transformer initialization wisdom"""
+
+  for name, params in m.named_parameters():
+    print('initializing:', name)
+
+    if len(params.shape) >= 2:
+      torch.nn.init.xavier_uniform_(params)
+    else:
+      if 'bias' in name:
+        torch.nn.init.zeros_(params)
+      else:
+        torch.nn.init.uniform_(params)
+
 if __name__ == "__main__":
 
   seqs = [[1, 2, 3, 4], [5, 7, 5], [6, 6, 6, 1, 1, 1]]
