@@ -2,15 +2,15 @@
 import os, numpy
 
 # Create samples for pretraining transformers using MIMIC notes
-# For now each note is one sample, but will break down further later
+# For now each note is one sample, but might break down further later
 
 base = os.environ['DATA_ROOT']
 
-cui_file_path = '../Cuis/filtered.csv'
-out_file_path = './training_data.txt'
+cui_file_path = '../Data/cuis-longest-span.psv'
+out_file_path = '../Data/mlm-training_data.txt'
 
-min_cui_count = 5
-max_cui_count = 25
+min_cui_count = 0
+max_cui_count = 50
 
 class UmlsConcept:
   """UMLS concept"""

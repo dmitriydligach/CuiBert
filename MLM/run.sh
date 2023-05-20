@@ -6,13 +6,14 @@
 # texts and then splits them in blocks of the same length).
 
 python3 run_mlm.py \
+    --line_by_line \
     --model_type bert \
     --config_name config.json \
     --tokenizer_name CuiTokenizer \
-    --train_file notes.txt \
-    --max_seq_length 512 \
-    --per_device_train_batch_size 28 \
-    --per_device_eval_batch_size 28 \
+    --train_file ../Data/mlm-training_data.txt \
+    --max_seq_length 50 \
+    --per_device_train_batch_size 768 \
+    --per_device_eval_batch_size 768 \
     --do_train \
     --do_eval \
     --output_dir Output \
@@ -22,7 +23,7 @@ python3 run_mlm.py \
     --max_steps -1 \
     --log_level passive \
     --logging_dir TensorboardLogs \
-    --save_steps 50000 \
+    --save_steps 5000 \
     --disable_tqdm True \
     --logging_strategy epoch \
     --evaluation_strategy epoch
