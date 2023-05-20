@@ -2,18 +2,19 @@
 
 # This is a Python reimplementation of
 # ctakes-misc/src/main/java/org/apache/ctakes/consumers/ExtractCuiSequences.java
+# Input: directory with XMI files (cTAKES annotations)
+# Output: single pipe-delimited file with CUIs and relevant information
 
 import os
 import pathlib
 from cassis import *
 
-xmi_dir = '/Users/Dima/Work/Data/MimicIII/Notes/Xmi/'
+input_xmi_dir = '/home/dima/Data/MimicIII/Notes/Xmi/'
+output_cui_file_path = '../Data/cuis.psv'
 
 ident_annot_class_name = 'org.apache.ctakes.typesystem.type.textsem.IdentifiedAnnotation'
 umls_concept_class_name = 'org_apache_ctakes_typesystem_type_refsem_UmlsConcept'
 type_system_path = 'TypeSystem.xml'
-
-out_path = 'cuis.csv'
 
 def get_cui_coding_sceme_preferred_text(identified_annot):
   """Extract CUIs and other info from an identified annotation"""
@@ -78,9 +79,9 @@ def main():
   type_system_file = open(type_system_path, 'rb')
   type_system = load_typesystem(type_system_file)
 
-  out_file = open(out_path, 'w')
-  for file_name in os.listdir(xmi_dir):
-    xmi_path = os.path.join(xmi_dir, file_name)
+  out_file = open(output_cui_file_path, 'w')
+  for file_name in os.listdir(input_xmi_dir):
+    xmi_path = os.path.join(input_xmi_dir, file_name)
     process_xmi_file(xmi_path, type_system, out_file)
 
 if __name__ == "__main__":

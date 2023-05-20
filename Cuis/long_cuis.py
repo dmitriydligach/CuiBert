@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 
-input_file = '/Users/Dima/Work/Data/DrBench/Cui/Original/test.csv'
-output_file = '/Users/Dima/Work/Data/DrBench/Cui/LongestSpan/test.csv'
+# Process a file with CUIs and relevant information such as CUI spans
+# Discard all CUIs that are enclosed by other CUIs
+# I.e. keep only the CUIs with the longest span
+# E.g. for 'portal vein obstruction', keep only the three word CUI
+
+input_file = '../Data/cuis.psv'
+output_file = '../Data/cuis-longest-span.psv'
 
 class UmlsConcept:
   """UMLS concept"""
