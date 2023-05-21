@@ -9,8 +9,8 @@ base = os.environ['DATA_ROOT']
 cui_file_path = '../Data/cuis-longest-span.psv'
 out_file_path = '../Data/mlm-training_data.txt'
 
-min_cui_count = 0
-max_cui_count = 50
+min_cui_count = 2
+max_cui_count = 100
 
 class UmlsConcept:
   """UMLS concept"""
