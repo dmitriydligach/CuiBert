@@ -41,7 +41,10 @@ class Tokenizer:
       self.itos[index] = token
       index += 1
 
-  def texts_to_seqs(self, texts, add_cls_token=False):
+  def texts_to_seqs(self,
+                    texts,
+                    add_cls_token=False,
+                    use_unk_token=False):
     """List of tokens to list of int sequences"""
 
     sequences = []
@@ -54,7 +57,7 @@ class Tokenizer:
       for token in token_list:
         if token in self.stoi:
           sequence.append(self.stoi[token])
-        else:
+        elif use_unk_token:
           sequence.append(self.stoi[self.unk])
 
       sequences.append(sequence)
