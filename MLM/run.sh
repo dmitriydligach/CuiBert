@@ -11,9 +11,9 @@ python3 run_mlm.py \
     --config_name config.json \
     --tokenizer_name CuiTokenizer \
     --train_file ../Data/mlm-training_data.txt \
-    --max_seq_length 50 \
-    --per_device_train_batch_size 768 \
-    --per_device_eval_batch_size 768 \
+    --max_seq_length 100 \
+    --per_device_train_batch_size 128 \
+    --per_device_eval_batch_size 128 \
     --do_train \
     --do_eval \
     --output_dir Output \
