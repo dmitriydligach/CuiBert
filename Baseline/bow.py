@@ -338,8 +338,24 @@ def eval_on_test(n_epochs):
 
   fit(model, train_loader, test_loader, n_epochs)
 
-  av_loss, accuracy, predicted_labels = evaluate(model, test_loader)
-  print(predicted_labels)
+  av_loss, f1, predicted_labels = evaluate(model, test_loader)
+  print('f1 on test set:', f1)
+
+  # convert label lists to CUI lists
+  predicted_cuis = []
+  for labels in predicted_labels:
+    cuis = [train_set.tokenizer.itos[label] for label in labels]
+    predicted_cuis.append(cuis)
+
+  # now get test CUIs in the same format
+  true_cuis = []
+  for cuis in test_set.outputs.values():
+    true_cuis.append(cuis)
+
+  print(len(predicted_cuis))
+  print(len(true_cuis))
+
+  return
 
 if __name__ == "__main__":
 
@@ -349,12 +365,15 @@ if __name__ == "__main__":
     dev_data_path=os.path.join(base, 'DrBench/Cui/LongestSpan/dev.csv'),
     test_data_path=os.path.join(base, 'DrBench/Cui/LongestSpan/test.csv'),
     cui_vocab_size=10,
-    epochs=50,
+    epochs=5,
     batch=128,
     hidden=1000,
     dropout=0.25,
     optimizer='Adam',
     lr=1)
 
+  print('running model selection...')
   optimal_epochs = model_selection()
-  # eval_on_test(optimal_epochs)
+
+  print('\nevaluating on test set...')
+  eval_on_test(optimal_epochs)
