@@ -80,12 +80,9 @@ class DatasetProvider:
     y = []
 
     for file in self.inputs.keys():
-      if len(self.inputs[file]) > 0 and len(self.outputs[file]) > 0:
-        x.append(self.inputs[file])
-        y.append(self.outputs[file])
-      else:
-        # print('empty assessment or treament:', file)
-        pass
+      # if len(self.inputs[file]) > 0 and len(self.outputs[file]) > 0:
+      x.append(self.inputs[file])
+      y.append(self.outputs[file])
 
     # make x and y matrices
     x = self.tokenizer.texts_to_seqs(x, add_cls_token=False)

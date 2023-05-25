@@ -154,7 +154,7 @@ def fit(model, train_loader, val_loader, n_epochs):
 
   return best_f1, optimal_epochs
 
-def multi_label_f1(pred_labels, true_labels):
+def f1_from_multi_hot_labels(pred_labels, true_labels):
   """Predictions and true labels are multi-hot tensors"""
 
   # Example:
@@ -176,25 +176,29 @@ def multi_label_f1(pred_labels, true_labels):
 
   return f1
 
-# def f1(pred_labels, true_labels):
-#   """Using actual CUIs"""
-#
-#   for file_name in dp.inputs.keys():
-#     prediction = set(dp.inputs[file_name])
-#     gold = set(dp.outputs[file_name])
-#     intersection = prediction.intersection(gold)
-#
-#     total_correct += len(intersection)
-#     total_prediction += len(prediction)
-#     total_gold += len(gold)
-#
-#   precision = total_correct / total_prediction
-#   recall = total_correct / total_gold
-#   f1 = 2 * (precision * recall) / (precision + recall)
-#
-#   print('precision:', precision)
-#   print('recall:', recall)
-#   print('f1 score:', f1)
+def f1_from_label_lists(pred_labels, true_labels):
+  """Using actual CUIs"""
+
+  total_correct = 0
+  total_prediction = 0
+  total_gold = 0
+
+  for pred, gold in zip(pred_labels, true_labels):
+    pred, gold = set(pred), set(gold)
+    intersection = pred.intersection(gold)
+
+    total_correct += len(intersection)
+    total_prediction += len(pred)
+    total_gold += len(gold)
+
+  if total_correct == 0 or total_prediction == 0 or total_gold == 0:
+    return 0, 0, 0
+
+  precision = total_correct / total_prediction
+  recall = total_correct / total_gold
+  f1 = 2 * (precision * recall) / (precision + recall)
+
+  return precision, recall, f1
 
 def evaluate(model, eval_data_loader):
   """Evaluate model on the evaluation set, e.g. dev or test"""
@@ -235,7 +239,7 @@ def evaluate(model, eval_data_loader):
     num_steps += 1
 
   av_loss = total_loss / num_steps
-  f1 = multi_label_f1(all_pred_labels, all_true_labels)
+  f1 = f1_from_multi_hot_labels(all_pred_labels, all_true_labels)
 
   # Convert multi-hot vectors to label lists
   predicted_labels = []
@@ -352,10 +356,10 @@ def eval_on_test(n_epochs):
   for cuis in test_set.outputs.values():
     true_cuis.append(cuis)
 
-  print(len(predicted_cuis))
-  print(len(true_cuis))
-
-  return
+  p, r, f1 = f1_from_label_lists(predicted_cuis, true_cuis)
+  print('\nprecision:', p)
+  print('recall:', r)
+  print('f1 score:', f1)
 
 if __name__ == "__main__":
 
@@ -364,8 +368,8 @@ if __name__ == "__main__":
     train_data_path=os.path.join(base, 'DrBench/Cui/LongestSpan/train.csv'),
     dev_data_path=os.path.join(base, 'DrBench/Cui/LongestSpan/dev.csv'),
     test_data_path=os.path.join(base, 'DrBench/Cui/LongestSpan/test.csv'),
-    cui_vocab_size=10,
-    epochs=5,
+    cui_vocab_size='all',
+    epochs=100,
     batch=128,
     hidden=1000,
     dropout=0.25,
