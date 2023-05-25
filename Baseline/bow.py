@@ -9,6 +9,7 @@ import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
 from torch.utils.data import RandomSampler, SequentialSampler
 
+from typing import Union
 from dataclasses import dataclass
 
 import os, random
@@ -16,8 +17,6 @@ import data, utils
 
 # deterministic determinism
 torch.manual_seed(2020)
-# torch.backends.cudnn.deterministic = True
-# torch.backends.cudnn.benchmark = False
 random.seed(2020)
 
 # model and model config locations
@@ -31,7 +30,7 @@ class ModelConfig:
   train_data_path: str
   dev_data_path: str
   test_data_path: str
-  cui_vocab_size: str
+  cui_vocab_size: Union[str, int]
 
   epochs: int
   batch: int
@@ -118,7 +117,7 @@ def fit(model, train_loader, val_loader, n_epochs):
     model.parameters(),
     lr=config.lr)
 
-  best_loss = float('inf')
+  best_f1 = 0
   optimal_epochs = 0
 
   for epoch in range(1, n_epochs + 1):
@@ -143,21 +142,22 @@ def fit(model, train_loader, val_loader, n_epochs):
       num_train_steps += 1
 
     av_tr_loss = train_loss / num_train_steps
-    val_loss, val_accuracy = evaluate(model, val_loader)
-    print('ep: %d, tr loss: %.4f, val loss: %.4f, val acc: %.4f' % \
-          (epoch, av_tr_loss, val_loss, val_accuracy))
+    val_loss, val_f1, _ = evaluate(model, val_loader)
+    print('ep: %d, tr loss: %.4f, val loss: %.4f, val f1: %.4f' % \
+          (epoch, av_tr_loss, val_loss, val_f1))
 
-    if val_loss < best_loss:
-      print('loss improved, saving model...')
+    if val_f1 > best_f1:
+      print('f1 improved, saving model...')
       torch.save(model.state_dict(), model_path)
-      best_loss = val_loss
+      best_f1 = val_f1
       optimal_epochs = epoch
 
-  return best_loss, optimal_epochs
+  return best_f1, optimal_epochs
 
-def multi_label_accuracy(pred_labels, true_labels):
+def multi_label_f1(pred_labels, true_labels):
   """Predictions and true labels are multi-hot tensors"""
 
+  # Example:
   # true_labels = [[1, 0, 1, 0], [0, 1, 0, 1], [1, 1, 1, 0]]
   # pred_labes =  [[1, 0, 0, 1], [0, 1, 1, 0], [1, 0, 1, 0]]
   # recall = 4 / 7 = 0.57
@@ -176,8 +176,28 @@ def multi_label_accuracy(pred_labels, true_labels):
 
   return f1
 
-def evaluate(model, data_loader):
-  """Evaluation routine"""
+# def f1(pred_labels, true_labels):
+#   """Using actual CUIs"""
+#
+#   for file_name in dp.inputs.keys():
+#     prediction = set(dp.inputs[file_name])
+#     gold = set(dp.outputs[file_name])
+#     intersection = prediction.intersection(gold)
+#
+#     total_correct += len(intersection)
+#     total_prediction += len(prediction)
+#     total_gold += len(gold)
+#
+#   precision = total_correct / total_prediction
+#   recall = total_correct / total_gold
+#   f1 = 2 * (precision * recall) / (precision + recall)
+#
+#   print('precision:', precision)
+#   print('recall:', recall)
+#   print('f1 score:', f1)
+
+def evaluate(model, eval_data_loader):
+  """Evaluate model on the evaluation set, e.g. dev or test"""
 
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
   model.to(device)
@@ -190,7 +210,7 @@ def evaluate(model, data_loader):
   all_pred_labels = None
   all_true_labels = None
 
-  for batch in data_loader:
+  for batch in eval_data_loader:
     batch = tuple(t.to(device) for t in batch)
     batch_inputs, batch_outputs = batch
 
@@ -200,6 +220,7 @@ def evaluate(model, data_loader):
 
     batch_logits = logits.detach().to('cpu')
     batch_outputs = batch_outputs.to('cpu')
+
     batch_probs = torch.sigmoid(batch_logits)
     batch_preds = (batch_probs > 0.5).int()
 
@@ -214,9 +235,15 @@ def evaluate(model, data_loader):
     num_steps += 1
 
   av_loss = total_loss / num_steps
-  accuracy = multi_label_accuracy(all_pred_labels, all_true_labels)
+  f1 = multi_label_f1(all_pred_labels, all_true_labels)
 
-  return av_loss, accuracy
+  # Convert multi-hot vectors to label lists
+  predicted_labels = []
+  for vector in all_pred_labels:
+    labels = torch.nonzero(vector).flatten().tolist()
+    predicted_labels.append(labels)
+
+  return av_loss, f1, predicted_labels
  
 def model_selection():
   """Eval on the dev set"""
@@ -259,12 +286,60 @@ def model_selection():
     hidden_units=config.hidden,
     dropout_rate=config.dropout)
 
-  best_loss, optimal_epochs = fit(
+  best_f1, optimal_epochs = fit(
     model,
     train_loader,
     val_loader,
     config.epochs)
-  print('best loss %.4f after %d epochs' % (best_loss, optimal_epochs))
+  print('best f1 %.4f after %d epochs' % (best_f1, optimal_epochs))
+
+  return optimal_epochs
+
+def eval_on_test(n_epochs):
+  """Eval on the dev set"""
+
+  train_set = data.DatasetProvider(
+    cui_file_path=config.train_data_path,
+    cui_vocab_size=config.cui_vocab_size,
+    tokenize_from_scratch=True)
+
+  test_set = data.DatasetProvider(
+    cui_file_path=config.test_data_path,
+    cui_vocab_size=config.cui_vocab_size,
+    tokenize_from_scratch=False)
+
+  tr_in_seqs, tr_out_seqs = train_set.load_as_sequences()
+  test_in_seqs, test_out_seqs = test_set.load_as_sequences()
+  print('loaded %d training and %d test samples' % \
+        (len(tr_in_seqs), len(test_in_seqs)))
+
+  max_cui_seq_len = max(len(seq) for seq in tr_in_seqs)
+  max_out_seq_len = max(len(seq) for seq in tr_out_seqs)
+  print('longest cui input sequence:', max_cui_seq_len)
+  print('longest cui ouput sequence:', max_out_seq_len)
+
+  train_loader = make_data_loader(
+    utils.sequences_to_matrix(tr_in_seqs, len(train_set.tokenizer.stoi)),
+    utils.sequences_to_matrix(tr_out_seqs, len(train_set.tokenizer.stoi)),
+    config.batch,
+    'train')
+
+  test_loader = make_data_loader(
+    utils.sequences_to_matrix(test_in_seqs, len(train_set.tokenizer.stoi)),
+    utils.sequences_to_matrix(test_out_seqs, len(train_set.tokenizer.stoi)),
+    config.batch,
+    'test')
+
+  model = BagOfWords(
+    input_vocab_size=len(train_set.tokenizer.stoi),
+    output_vocab_size=len(train_set.tokenizer.stoi),
+    hidden_units=config.hidden,
+    dropout_rate=config.dropout)
+
+  fit(model, train_loader, test_loader, n_epochs)
+
+  av_loss, accuracy, predicted_labels = evaluate(model, test_loader)
+  print(predicted_labels)
 
 if __name__ == "__main__":
 
@@ -273,12 +348,13 @@ if __name__ == "__main__":
     train_data_path=os.path.join(base, 'DrBench/Cui/LongestSpan/train.csv'),
     dev_data_path=os.path.join(base, 'DrBench/Cui/LongestSpan/dev.csv'),
     test_data_path=os.path.join(base, 'DrBench/Cui/LongestSpan/test.csv'),
-    cui_vocab_size='all',
+    cui_vocab_size=10,
     epochs=50,
     batch=128,
-    hidden=10000,
+    hidden=1000,
     dropout=0.25,
     optimizer='Adam',
     lr=1)
 
-  model_selection()
+  optimal_epochs = model_selection()
+  # eval_on_test(optimal_epochs)
