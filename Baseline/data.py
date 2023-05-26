@@ -80,7 +80,8 @@ class DatasetProvider:
     y = []
 
     for file in self.inputs.keys():
-      # if len(self.inputs[file]) > 0 and len(self.outputs[file]) > 0:
+      if len(self.inputs[file]) == 0 or len(self.outputs[file]) == 0:
+        print('warning: empty assessment or treatment in', file)
       x.append(self.inputs[file])
       y.append(self.outputs[file])
 

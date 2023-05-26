@@ -15,10 +15,6 @@ from dataclasses import dataclass
 import os, random
 import data, utils
 
-# deterministic determinism
-torch.manual_seed(2020)
-random.seed(2020)
-
 # model and model config locations
 model_path = 'Model/model.pt'
 config_path = 'Model/config.p'
@@ -148,7 +144,7 @@ def fit(model, train_loader, val_loader, n_epochs):
 
     if val_f1 > best_f1:
       print('f1 improved, saving model...')
-      torch.save(model.state_dict(), model_path)
+      # torch.save(model.state_dict(), model_path)
       best_f1 = val_f1
       optimal_epochs = epoch
 
@@ -252,6 +248,10 @@ def evaluate(model, eval_data_loader):
 def model_selection():
   """Eval on the dev set"""
 
+  # deterministic determinism
+  torch.manual_seed(2022)
+  random.seed(2022)
+
   train_set = data.DatasetProvider(
     cui_file_path=config.train_data_path,
     cui_vocab_size=config.cui_vocab_size,
@@ -302,6 +302,10 @@ def model_selection():
 def eval_on_test(n_epochs):
   """Eval on the dev set"""
 
+  # deterministic determinism
+  torch.manual_seed(2022)
+  random.seed(2022)
+
   train_set = data.DatasetProvider(
     cui_file_path=config.train_data_path,
     cui_vocab_size=config.cui_vocab_size,
@@ -340,7 +344,8 @@ def eval_on_test(n_epochs):
     hidden_units=config.hidden,
     dropout_rate=config.dropout)
 
-  fit(model, train_loader, test_loader, n_epochs)
+  best_f1, optimal_epochs = fit(model, train_loader, test_loader, n_epochs)
+  print('best f1 on test:', best_f1)
 
   av_loss, f1, predicted_labels = evaluate(model, test_loader)
   print('f1 on test set:', f1)
@@ -367,17 +372,17 @@ if __name__ == "__main__":
   config = ModelConfig(
     train_data_path=os.path.join(base, 'DrBench/Cui/LongestSpan/train.csv'),
     dev_data_path=os.path.join(base, 'DrBench/Cui/LongestSpan/dev.csv'),
-    test_data_path=os.path.join(base, 'DrBench/Cui/LongestSpan/test.csv'),
+    test_data_path=os.path.join(base, 'DrBench/Cui/LongestSpan/dev.csv'),
     cui_vocab_size='all',
     epochs=100,
     batch=128,
-    hidden=1000,
-    dropout=0.25,
+    hidden=10000,
+    dropout=0.1,
     optimizer='Adam',
     lr=1)
 
   print('running model selection...')
-  optimal_epochs = model_selection()
+  best_epochs = model_selection()
 
   print('\nevaluating on test set...')
-  eval_on_test(optimal_epochs)
+  eval_on_test(best_epochs)
