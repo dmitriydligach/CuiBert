@@ -344,16 +344,15 @@ def eval_on_test(n_epochs):
     hidden_units=config.hidden,
     dropout_rate=config.dropout)
 
-  best_f1, optimal_epochs = fit(model, train_loader, test_loader, n_epochs)
-  print('best f1 on test:', best_f1)
+  fit(model, train_loader, test_loader, n_epochs)
 
-  av_loss, f1, predicted_labels = evaluate(model, test_loader)
-  print('f1 on test set:', f1)
+  _, f1, predicted_indices = evaluate(model, test_loader)
+  print('f1 using multi-hot labels:', f1)
 
-  # convert label lists to CUI lists
+  # convert lists of indices to CUI lists
   predicted_cuis = []
-  for labels in predicted_labels:
-    cuis = [train_set.tokenizer.itos[label] for label in labels]
+  for indices in predicted_indices:
+    cuis = [train_set.tokenizer.itos[index] for index in indices]
     predicted_cuis.append(cuis)
 
   # now get test CUIs in the same format
