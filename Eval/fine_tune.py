@@ -10,19 +10,19 @@ from transformers import (TrainingArguments,
                           IntervalStrategy)
 
 # misc constants
-pretrained_model_path = 'checkpoint-30000'
+pretrained_model_path = 'checkpoint-200000'
 output_dir = './Results'
 metric_for_best_model = 'eval_multilab_acc'
-tokenizer_path = './checkpoint-30000'
+tokenizer_path = './checkpoint-200000'
 results_file = './results.txt'
 
 # hyperparameters
-model_selection_n_epochs = 5
+model_selection_n_epochs = 10
 batch_size = 512
 
 # search over these hyperparameters
 classifier_dropouts = [0.1]
-learning_rates = [1e-2, 1e-3, 1e-4, 1e-5]
+learning_rates = [2e-2, 3e-2, 5e-2, 7e-2]
 
 def multi_label_accuracy(pred_labels, true_labels):
   """Predictions and true labels are multi-hot tensors"""
@@ -96,12 +96,18 @@ def eval_on_dev_set(train_path, dev_path, learning_rate, classifier_dropout):
 
   model = AutoModelForSequenceClassification.from_pretrained(
     pretrained_model_path,
-    num_labels=30522,
+    num_labels=656,
     problem_type='multi_label_classification')
   model.dropout = torch.nn.modules.dropout.Dropout(classifier_dropout)
 
-  train_dataset = data.SummarizationDataset(train_path, tokenizer_path)
-  dev_dataset = data.SummarizationDataset(dev_path, tokenizer_path)
+  train_dataset = data.SummarizationDataset(
+    train_path,
+    tokenizer_path,
+    tokenize_from_scratch=True)
+  dev_dataset = data.SummarizationDataset(
+    dev_path,
+    tokenizer_path,
+    tokenize_from_scratch=False)
 
   training_args = TrainingArguments(
     output_dir=output_dir,
