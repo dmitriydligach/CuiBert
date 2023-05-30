@@ -11,9 +11,6 @@ import torch
 from torch.utils.data import Dataset
 from transformers import AutoTokenizer
 
-# maximum sequence length
-max_length = 100
-
 # output CUI tokenizer
 default_tokenizer_pickle = 'OutputTokenizer/tokenizer.p'
 
@@ -23,21 +20,25 @@ class SummarizationDataset(Dataset):
   def __init__(
    self,
    cui_file_path,
-   pretrained_tokenizer_path,
-   tokenize_from_scratch):
+   max_input_length,
+   pretrained_tokenizer,
+   tokenize_output_from_scratch):
     """Load tokenizer and save corpus path"""
 
     self.x = []
     self.y = []
 
+    # set it to whatever was used for pretraining
+    self.max_input_length = max_input_length
+
     # pair inputs and outputs
     self.read_data(cui_file_path)
 
-    # use tokenizer from the model
-    self.pretrained_tokenizer = AutoTokenizer.from_pretrained(pretrained_tokenizer_path)
+    # for inputs, use tokenizer from pretraining
+    self.input_tokenizer = AutoTokenizer.from_pretrained(pretrained_tokenizer)
 
     # tokenizer to index possible CUI outputs
-    if tokenize_from_scratch:
+    if tokenize_output_from_scratch:
       self.output_tokenizer = tokenizer.Tokenizer(n_words=None)
       self.index_output_cuis()
     else:
@@ -64,13 +65,13 @@ class SummarizationDataset(Dataset):
     # pair inputs and outputs
     for file in inputs.keys():
       if len(inputs[file]) == 0 or len(outputs[file]) == 0:
-        print(f'skpping {file}: empty assessment or treatment...')
+        # print(f'skpping {file}: empty assessment or treatment...')
         continue
       self.x.append(inputs[file])
       self.y.append(outputs[file])
 
   def index_output_cuis(self):
-    """Read text and map tokens to ints"""
+    """Map output cuis to ints"""
 
     if os.path.isdir('OutputTokenizer/'):
       shutil.rmtree('OutputTokenizer/')
@@ -92,30 +93,25 @@ class SummarizationDataset(Dataset):
   def __getitem__(self, index):
     """Required by pytorch"""
 
-    # sequence of CUI indices + special tokens
-    input = self.pretrained_tokenizer(
+    # input as a sequence of CUI indices + special tokens
+    input = self.input_tokenizer(
       self.x[index],
       is_split_into_words=True,
-      max_length=max_length,
+      add_special_tokens=True,
+      max_length=self.max_input_length,
       padding='max_length',
       truncation=True,
       return_tensors='pt')
 
-    # sequence of CUI indices
-    # output = self.pretrained_tokenizer(
-    #   self.y[index],
-    #   is_split_into_words=True,
-    #   add_special_tokens=False)
-    #
-    # sequences of CUI indices
+    # output as a sequences of CUI indices
     output = self.output_tokenizer.texts_to_seqs(
       [self.y[index]],
       add_cls_token=False,
-      use_unk_token=False)
+      use_unk_token=False)[0]
 
-    # mult-hot vectors
+    # output as a mult-hot vectors
     labels = torch.zeros(len(self.output_tokenizer.stoi))
-    labels[output[0]] = 1.0
+    labels[output] = 1.0
 
     return dict(
       input_ids = input.input_ids.squeeze(),

@@ -10,21 +10,22 @@ from transformers import (TrainingArguments,
                           IntervalStrategy)
 
 # misc constants
-pretrained_model_path = 'checkpoint-200000'
+pretrained_model_path = '/home/dima/Git0/CuiBert/MLM/Output/checkpoint-280000'
 output_dir = './Results'
-metric_for_best_model = 'eval_multilab_acc'
-tokenizer_path = './checkpoint-200000'
+metric_for_best_model = 'eval_multilab_f1'
+tokenizer_path = pretrained_model_path
 results_file = './results.txt'
+max_input_length = 100 # must match what was used for pretraining
 
 # hyperparameters
-model_selection_n_epochs = 10
+model_selection_n_epochs = 100
 batch_size = 512
 
 # search over these hyperparameters
-classifier_dropouts = [0.1]
-learning_rates = [2e-2, 3e-2, 5e-2, 7e-2]
+classifier_dropouts = [0.1, 0.2, 0.5]
+learning_rates = [1, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5]
 
-def multi_label_accuracy(pred_labels, true_labels):
+def f1(pred_labels, true_labels):
   """Predictions and true labels are multi-hot tensors"""
 
   # true_labels = [[1, 0, 1, 0], [0, 1, 0, 1], [1, 1, 1, 0]]
@@ -57,8 +58,7 @@ def compute_metrics(eval_pred):
   preds = (probs > 0.5).int()
 
   # https://stackoverflow.com/questions/69087044/early-stopping-in-bert-trainer-instances
-  # return {'multilab_acc': metrics.pr_auc_score(y_test=labels, probs=probabilities)}
-  return {'multilab_acc': multi_label_accuracy(preds, labels)}
+  return {'multilab_f1': f1(preds, labels)}
 
 def grid_search(train_path, dev_path):
   """Try different hyperparameter combinations and return the best"""
@@ -68,12 +68,14 @@ def grid_search(train_path, dev_path):
 
   for classifier_dropout in classifier_dropouts:
     for learning_rate in learning_rates:
-      print('evaluating lr and dropout:', classifier_dropout, learning_rate)
+
+      print('evaluating lr and dropout:', learning_rate, classifier_dropout)
       best_n_epochs, best_metric_value = eval_on_dev_set(
         train_path,
         dev_path,
         learning_rate,
         classifier_dropout)
+
       search_results[best_metric_value] = \
         [best_n_epochs, learning_rate, classifier_dropout]
 
@@ -94,20 +96,22 @@ def eval_on_dev_set(train_path, dev_path, learning_rate, classifier_dropout):
   torch.manual_seed(2022)
   random.seed(2022)
 
-  model = AutoModelForSequenceClassification.from_pretrained(
-    pretrained_model_path,
-    num_labels=656,
-    problem_type='multi_label_classification')
-  model.dropout = torch.nn.modules.dropout.Dropout(classifier_dropout)
-
   train_dataset = data.SummarizationDataset(
     train_path,
+    max_input_length,
     tokenizer_path,
-    tokenize_from_scratch=True)
+    tokenize_output_from_scratch=True)
   dev_dataset = data.SummarizationDataset(
     dev_path,
+    max_input_length,
     tokenizer_path,
-    tokenize_from_scratch=False)
+    tokenize_output_from_scratch=False)
+
+  model = AutoModelForSequenceClassification.from_pretrained(
+    pretrained_model_path,
+    num_labels=len(train_dataset.output_tokenizer.stoi),
+    problem_type='multi_label_classification')
+  model.dropout = torch.nn.modules.dropout.Dropout(classifier_dropout)
 
   training_args = TrainingArguments(
     output_dir=output_dir,
@@ -134,10 +138,10 @@ def eval_on_dev_set(train_path, dev_path, learning_rate, classifier_dropout):
 
   for entry in trainer.state.log_history:
     if metric_for_best_model in entry:
-      print('ep: %s, perf: %s' % (entry['epoch'], entry[metric_for_best_model]))
+      print(f"ep: {entry['epoch']}, perf: entry[metric_for_best_model]")
       if entry[metric_for_best_model] == best_metric_value:
         best_n_epochs = entry['epoch']
-  print('best epochs: %s, best performance: %s' % (best_n_epochs, best_metric_value))
+  print(f"best epochs: {best_n_epochs}, best performance: {best_metric_value}")
 
   # remove intermediate checkpoint dir to save space
   shutil.rmtree(output_dir)
@@ -151,8 +155,7 @@ def main():
   train_path = os.path.join(base_path, 'DrBench/Cui/LongestSpan/train.csv')
   dev_path = os.path.join(base_path, 'DrBench/Cui/LongestSpan/dev.csv')
 
-  optimal_n_epochs, optimal_learning_rate, optimal_classifier_dropout = \
-    grid_search(train_path, dev_path)
+  grid_search(train_path, dev_path)
 
 if __name__ == "__main__":
   "My kind of street"
