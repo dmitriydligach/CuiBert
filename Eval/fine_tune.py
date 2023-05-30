@@ -22,8 +22,8 @@ model_selection_n_epochs = 100
 batch_size = 512
 
 # search over these hyperparameters
-classifier_dropouts = [0.1, 0.2, 0.5]
-learning_rates = [1, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5]
+classifier_dropouts = [0.1, 0.25, 0.5]
+learning_rates = [1, 1e-1, 1e-2, 5e-2, 1e-3, 1e-4, 1e-5]
 
 def f1(pred_labels, true_labels):
   """Predictions and true labels are multi-hot tensors"""
@@ -138,7 +138,7 @@ def eval_on_dev_set(train_path, dev_path, learning_rate, classifier_dropout):
 
   for entry in trainer.state.log_history:
     if metric_for_best_model in entry:
-      print(f"ep: {entry['epoch']}, perf: entry[metric_for_best_model]")
+      print(f"ep: {entry['epoch']}, perf: {entry[metric_for_best_model]}")
       if entry[metric_for_best_model] == best_metric_value:
         best_n_epochs = entry['epoch']
   print(f"best epochs: {best_n_epochs}, best performance: {best_metric_value}")
