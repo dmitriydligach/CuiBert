@@ -101,13 +101,16 @@ def make_data_loader(model_inputs, model_outputs, batch_size, partition):
 
   return data_loader
 
-def fit(model, train_loader, val_loader, n_epochs):
+def fit(model, train_loader, val_loader, n_epochs, weights):
   """Training routine"""
 
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
   model.to(device)
 
-  criterion = nn.BCEWithLogitsLoss()
+  # weights = torch.ones((1, 1328)).to(device)
+  weights = weights.to(device)
+
+  criterion = nn.BCEWithLogitsLoss(reduction='none')
 
   optimizer = torch.optim.Adam(
     model.parameters(),
@@ -129,6 +132,10 @@ def fit(model, train_loader, val_loader, n_epochs):
 
       logits = model(batch_inputs)
       loss = criterion(logits, batch_outputs)
+
+      # loss with weights
+      loss = (loss * weights).mean()
+
       loss.backward()
 
       torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
@@ -272,9 +279,21 @@ def model_selection():
   print('longest cui input sequence:', max_cui_seq_len)
   print('longest cui ouput sequence:', max_out_seq_len)
 
+  # TODO: what are the first three dimensions?
+  # why is their vertical sum zero?
+  tr_in_multi_hot = utils.sequences_to_matrix(
+    tr_in_seqs,
+    len(train_set.tokenizer.stoi))
+  tr_out_multi_hot = utils.sequences_to_matrix(
+    tr_out_seqs,
+    len(train_set.tokenizer.stoi))
+
+  # class weights for each output
+  weights = 1 / (torch.sum(tr_in_multi_hot, dim=0) + 1)
+
   train_loader = make_data_loader(
-    utils.sequences_to_matrix(tr_in_seqs, len(train_set.tokenizer.stoi)),
-    utils.sequences_to_matrix(tr_out_seqs, len(train_set.tokenizer.stoi)),
+    tr_in_multi_hot,
+    tr_out_multi_hot,
     config.batch,
     'train')
 
@@ -294,7 +313,8 @@ def model_selection():
     model,
     train_loader,
     val_loader,
-    config.epochs)
+    config.epochs,
+    weights)
   print('best f1 %.4f after %d epochs' % (best_f1, optimal_epochs))
 
   return optimal_epochs
@@ -373,15 +393,15 @@ if __name__ == "__main__":
     dev_data_path=os.path.join(base, 'DrBench/Cui/LongestSpan/dev.csv'),
     test_data_path=os.path.join(base, 'DrBench/Cui/LongestSpan/dev.csv'),
     cui_vocab_size='all',
-    epochs=100,
+    epochs=500,
     batch=128,
     hidden=10000,
-    dropout=0.1,
+    dropout=0.5,
     optimizer='Adam',
     lr=1)
 
   print('running model selection...')
   best_epochs = model_selection()
 
-  print('\nevaluating on test set...')
-  eval_on_test(best_epochs)
+  # print('\nevaluating on test set...')
+  # eval_on_test(best_epochs)
