@@ -101,14 +101,17 @@ def make_data_loader(model_inputs, model_outputs, batch_size, partition):
 
   return data_loader
 
-def fit(model, train_loader, val_loader, n_epochs, weights):
+def fit(model, train_loader, val_loader, n_epochs, weights=None):
   """Training routine"""
 
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
   model.to(device)
 
-  # weights = torch.ones((1, 1328)).to(device)
-  weights = weights.to(device)
+  # https://discuss.pytorch.org/t/multi-label-multi-class-class-imbalance/37573
+  if weights is None:
+    weights = torch.ones(1328).to(device)
+  else:
+    weights = weights.to(device)
 
   criterion = nn.BCEWithLogitsLoss(reduction='none')
 
@@ -132,8 +135,6 @@ def fit(model, train_loader, val_loader, n_epochs, weights):
 
       logits = model(batch_inputs)
       loss = criterion(logits, batch_outputs)
-
-      # loss with weights
       loss = (loss * weights).mean()
 
       loss.backward()
@@ -393,7 +394,7 @@ if __name__ == "__main__":
     dev_data_path=os.path.join(base, 'DrBench/Cui/LongestSpan/dev.csv'),
     test_data_path=os.path.join(base, 'DrBench/Cui/LongestSpan/dev.csv'),
     cui_vocab_size='all',
-    epochs=500,
+    epochs=300,
     batch=128,
     hidden=10000,
     dropout=0.5,
