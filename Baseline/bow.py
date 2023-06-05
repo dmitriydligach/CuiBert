@@ -109,7 +109,7 @@ def fit(model, train_loader, val_loader, n_epochs, weights=None):
 
   # https://discuss.pytorch.org/t/multi-label-multi-class-class-imbalance/37573
   if weights is None:
-    weights = torch.ones(1328).to(device)
+    weights = torch.ones(1325).to(device)
   else:
     weights = weights.to(device)
 
@@ -280,8 +280,6 @@ def model_selection():
   print('longest cui input sequence:', max_cui_seq_len)
   print('longest cui ouput sequence:', max_out_seq_len)
 
-  # TODO: what are the first three dimensions?
-  # why is their vertical sum zero?
   tr_in_multi_hot = utils.sequences_to_matrix(
     tr_in_seqs,
     len(train_set.tokenizer.stoi))
@@ -290,7 +288,8 @@ def model_selection():
     len(train_set.tokenizer.stoi))
 
   # class weights for each output
-  weights = 1 / (torch.sum(tr_in_multi_hot, dim=0) + 1)
+  # weights =  len(tr_out_seqs) / (torch.sum(tr_out_multi_hot, dim=0) + 1)
+  weights = 1 / (torch.sum(tr_out_multi_hot, dim=0) + 1)
 
   train_loader = make_data_loader(
     tr_in_multi_hot,
@@ -394,7 +393,7 @@ if __name__ == "__main__":
     dev_data_path=os.path.join(base, 'DrBench/Cui/LongestSpan/dev.csv'),
     test_data_path=os.path.join(base, 'DrBench/Cui/LongestSpan/dev.csv'),
     cui_vocab_size='all',
-    epochs=300,
+    epochs=1000,
     batch=128,
     hidden=10000,
     dropout=0.1,
