@@ -397,7 +397,7 @@ if __name__ == "__main__":
     epochs=300,
     batch=128,
     hidden=10000,
-    dropout=0.5,
+    dropout=0.1,
     optimizer='Adam',
     lr=1)
 

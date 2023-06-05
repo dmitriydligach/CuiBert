@@ -86,11 +86,9 @@ class DatasetProvider:
       y.append(self.outputs[file])
 
     # make x and y matrices
-    x = self.tokenizer.texts_to_seqs(x, add_cls_token=False)
-    y = self.tokenizer.texts_to_seqs(y, add_cls_token=False)
+    x = self.tokenizer.texts_to_seqs(x)
+    y = self.tokenizer.texts_to_seqs(y)
 
-    # column zero is empty
-    # return x, y[:,1:]
     return x, y
 
 if __name__ == "__main__":
