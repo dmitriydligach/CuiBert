@@ -104,12 +104,8 @@ class SummarizationDataset(Dataset):
       return_tensors='pt')
 
     # output as a sequences of CUI indices
-    output = self.output_tokenizer.texts_to_seqs(
-      [self.y[index]],
-      add_cls_token=False,
-      use_unk_token=False)[0]
-
-    # output as a mult-hot vectors
+    output = self.output_tokenizer.texts_to_seqs([self.y[index]])[0]
+    # output as a multi-hot vector
     labels = torch.zeros(len(self.output_tokenizer.stoi))
     labels[output] = 1.0
 
@@ -123,5 +119,6 @@ if __name__ == "__main__":
   base = os.environ['DATA_ROOT']
   data_path = os.path.join(base, 'DrBench/Cui/LongestSpan/train.csv')
 
-  data = SummarizationDataset(data_path, 'checkpoint-200000')
-  print(data[0])
+  model_path = '/home/dima/Git0/CuiBert/MLM/Output/checkpoint-280000/'
+  data = SummarizationDataset(data_path, 100, model_path, True)
+  print(data[11])
