@@ -23,7 +23,7 @@ python3 run_mlm.py \
     --max_steps -1 \
     --log_level passive \
     --logging_dir TensorboardLogs \
-    --save_steps 5000 \
+    --save_steps 10000 \
     --disable_tqdm True \
     --logging_strategy epoch \
     --evaluation_strategy epoch
