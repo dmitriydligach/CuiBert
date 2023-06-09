@@ -3,14 +3,14 @@
 import sys
 sys.path.append('../Lib/')
 
-import torch, random, data, os, shutil
+import torch, random, data, os, shutil, metrics
 from transformers import (TrainingArguments,
                           Trainer,
                           AutoModelForSequenceClassification,
                           IntervalStrategy)
 
 # misc constants
-pretrained_model_path = '/home/dima/Git0/CuiBert/MLM/Output/checkpoint-280000'
+pretrained_model_path = '/home/dima/Git0/CuiBert/MLM/Output/checkpoint-60000'
 output_dir = './Results'
 metric_for_best_model = 'eval_multilab_f1'
 tokenizer_path = pretrained_model_path
@@ -25,27 +25,6 @@ batch_size = 512
 classifier_dropouts = [0.1, 0.25, 0.5]
 learning_rates = [1, 1e-1, 1e-2, 5e-2, 1e-3, 1e-4, 1e-5]
 
-def f1(pred_labels, true_labels):
-  """Predictions and true labels are multi-hot tensors"""
-
-  # true_labels = [[1, 0, 1, 0], [0, 1, 0, 1], [1, 1, 1, 0]]
-  # pred_labes =  [[1, 0, 0, 1], [0, 1, 1, 0], [1, 0, 1, 0]]
-  # recall = 4 / 7 = 0.57
-  # precision = 4 / 6 = 0.67
-
-  correct_predictions = (true_labels * pred_labels).sum()
-  total_positive_labels = true_labels.sum()
-  total_predicted_labels = pred_labels.sum()
-
-  if total_predicted_labels == 0 or total_positive_labels == 0:
-    return 0
-
-  precision = correct_predictions / total_predicted_labels
-  recall = correct_predictions / total_positive_labels
-  f1 = 2 * (precision * recall) / (precision + recall)
-
-  return f1
-
 def compute_metrics(eval_pred):
   """Compute custom evaluation metric"""
 
@@ -58,7 +37,7 @@ def compute_metrics(eval_pred):
   preds = (probs > 0.5).int()
 
   # https://stackoverflow.com/questions/69087044/early-stopping-in-bert-trainer-instances
-  return {'multilab_f1': f1(preds, labels)}
+  return {'multilab_f1': metrics.f1(preds, labels)}
 
 def grid_search(train_path, dev_path):
   """Try different hyperparameter combinations and return the best"""

@@ -23,4 +23,5 @@ BERT trained on CUI sequences
 * Possibly update per_device_train/eval_batch_size in run.sh
 * Possibly update train_file in run.sh
 * Put CuiTokenizer in MLM directory
+* Update model_max_length in CuiTokenizer/tokenizer_config.json 
 * Run MLM/run.sh
