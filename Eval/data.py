@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 
 import sys
+
+import utils
+
 sys.path.append('../Lib/')
 import tokenizer
 
@@ -84,6 +87,17 @@ class SummarizationDataset(Dataset):
     pickle.dump(self.output_tokenizer, pickle_file)
     print('output vocab size:', len(self.output_tokenizer.stoi))
 
+  def compute_weights(self):
+    """Weights for training"""
+
+    out_seqs = self.output_tokenizer.texts_to_seqs(self.y)
+    out_multi_hot = utils.sequences_to_matrix(
+      out_seqs,
+      len(self.output_tokenizer.stoi))
+    weights = 1 / (torch.sum(out_multi_hot, dim=0) + 1)
+
+    return weights
+
   def __len__(self):
     """Requried by pytorch"""
 
@@ -119,6 +133,8 @@ if __name__ == "__main__":
   base = os.environ['DATA_ROOT']
   data_path = os.path.join(base, 'DrBench/Cui/LongestSpan/train.csv')
 
-  model_path = '/home/dima/Git0/CuiBert/MLM/Output/checkpoint-280000/'
+  model_path = '/home/dima/Git0/CuiBert/MLM/Output/checkpoint-60000/'
   data = SummarizationDataset(data_path, 100, model_path, True)
   print(data[11])
+
+  data.compute_weights()

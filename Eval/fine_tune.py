@@ -10,7 +10,7 @@ from transformers import (TrainingArguments,
                           IntervalStrategy)
 
 # misc constants
-pretrained_model_path = '/home/dima/Git0/CuiBert/MLM/Output/checkpoint-60000'
+pretrained_model_path = '/home/dima/Git0/CuiBert/MLM/Output/checkpoint-10000'
 output_dir = './Results'
 metric_for_best_model = 'eval_multilab_f1'
 tokenizer_path = pretrained_model_path
@@ -24,6 +24,43 @@ batch_size = 512
 # search over these hyperparameters
 classifier_dropouts = [0.1, 0.25, 0.5]
 learning_rates = [1, 1e-1, 1e-2, 5e-2, 1e-3, 1e-4, 1e-5]
+
+class WeightedTrainer(Trainer):
+  """ Need this to compute weighted loss"""
+
+  def __init__(
+    self,
+    model,
+    args,
+    train_dataset,
+    eval_dataset,
+    compute_metrics,
+    weights):
+    """Deconstruct the constructor"""
+
+    super(WeightedTrainer, self).__init__(
+      model=model,
+      args=args,
+      train_dataset=train_dataset,
+      eval_dataset=eval_dataset,
+      compute_metrics=compute_metrics)
+
+    self.weights = weights
+
+  def compute_loss(self, model, inputs, return_outputs=False):
+    """Weighted loss"""
+
+    loss_fct = torch.nn.BCEWithLogitsLoss(reduction='none')
+    weights = self.weights.to(model.device)
+
+    model_outputs = model(**inputs)
+    labels = inputs.get('labels')
+    logits = model_outputs.get('logits')
+
+    loss = loss_fct(logits, labels)
+    loss = (loss * weights).mean()
+
+    return (loss, model_outputs) if return_outputs else loss
 
 def compute_metrics(eval_pred):
   """Compute custom evaluation metric"""
@@ -104,12 +141,13 @@ def eval_on_dev_set(train_path, dev_path, learning_rate, classifier_dropout):
     save_strategy=IntervalStrategy.EPOCH,
     evaluation_strategy=IntervalStrategy.EPOCH,
     disable_tqdm=True)
-  trainer = Trainer(
+  trainer = WeightedTrainer(
     model=model,
     args=training_args,
     train_dataset=train_dataset,
     eval_dataset=dev_dataset,
-    compute_metrics=compute_metrics)
+    compute_metrics=compute_metrics,
+    weights=train_dataset.compute_weights())
   trainer.train()
 
   best_n_epochs = None
