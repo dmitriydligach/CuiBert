@@ -10,7 +10,7 @@ from transformers import (TrainingArguments,
                           IntervalStrategy)
 
 # misc constants
-pretrained_model_path = '/home/dima/Git0/CuiBert/MLM/Output/checkpoint-10000'
+pretrained_model_path = '/home/dima/Git0/CuiBert/MLM/Output/checkpoint-90000'
 output_dir = './Results'
 metric_for_best_model = 'eval_multilab_f1'
 tokenizer_path = pretrained_model_path
@@ -35,7 +35,7 @@ class WeightedTrainer(Trainer):
     train_dataset,
     eval_dataset,
     compute_metrics,
-    weights):
+    weights=None):
     """Deconstruct the constructor"""
 
     super(WeightedTrainer, self).__init__(
@@ -51,14 +51,17 @@ class WeightedTrainer(Trainer):
     """Weighted loss"""
 
     loss_fct = torch.nn.BCEWithLogitsLoss(reduction='none')
-    weights = self.weights.to(model.device)
 
     model_outputs = model(**inputs)
     labels = inputs.get('labels')
     logits = model_outputs.get('logits')
-
     loss = loss_fct(logits, labels)
-    loss = (loss * weights).mean()
+
+    if self.weights is None:
+      loss = loss.mean()
+    else:
+      weights = self.weights.to(model.device)
+      loss = (loss * weights).mean()
 
     return (loss, model_outputs) if return_outputs else loss
 
